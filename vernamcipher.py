@@ -45,8 +45,8 @@ def generate_key(message, offset):
         message_len = len(message)
     else:
         message_len = len(message.encode('utf8'))
-    with open('chat_key.txt', 'rb') as key:
-        return key.readline()[offset:offset+message_len]
+    with open('chat_key', 'rb') as key:
+        return key.read()[offset:offset+message_len]
 
 
 def encrypt(message, key):
