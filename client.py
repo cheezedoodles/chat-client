@@ -8,7 +8,8 @@ import queue
 
 from PyQt5.QtWidgets import (QMainWindow, QAction, QApplication,
                              QDesktopWidget, QGridLayout, QPushButton, QWidget,
-                             QLineEdit, QPlainTextEdit, QLabel)
+                             QLineEdit, QPlainTextEdit, QLabel,
+                             QMessageBox)
 from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import pyqtSlot, pyqtSignal, QObject
 
@@ -16,12 +17,20 @@ from vernamcipher import (generate_key, encrypt,
                           decrypt, calculate_offset)
 
 
+WEBSOCKET_URL = f'ws://127.0.0.1:8000/ws/chat/'
+
+BASE_URL = 'http://127.0.0.1:8000/'
+
+ORIGIN = 'http://127.0.0.1:8000'
+
 class ChatThread(QObject, threading.Thread):
 
     rcv = pyqtSignal()
 
     def __init__(self, chat_id):
         self.chat_id = chat_id
+        self.ws = None
+        self.new_msg = None
         super().__init__()
 
     async def send(self, message):
@@ -29,12 +38,15 @@ class ChatThread(QObject, threading.Thread):
 
     async def receiver(self):
         async with websockets.connect(
-            f'ws://127.0.0.1:8000/ws/chat/{self.chat_id}/',
-            origin='http://127.0.0.1:8000'
+            WEBSOCKET_URL + f'{self.chat_id}/',
+            origin=ORIGIN
         ) as websocket:
             self.ws = websocket
             while True:
                 self.new_msg = await self.ws.recv()
+                print(json.loads(self.new_msg)['message'], 
+                type(json.loads(self.new_msg)['message']),
+                type(json.loads(self.new_msg)['message'][0]))
                 message_queue.put(json.loads(self.new_msg)['message'])
                 self.rcv.emit()
 
@@ -102,9 +114,6 @@ class MenuLogin(QWidget):
 
     def __init__(self):
         super().__init__()
-        self.initUI()
-
-    def initUI(self):
         username_label = QLabel('<font size="4"> username </font>')
         self.username = QLineEdit(self)
 
@@ -140,7 +149,7 @@ class MenuLogin(QWidget):
         password = self.password.text()
         try:
             login_request = requests.post(
-                'http://127.0.0.1:8000/api/login/',
+                BASE_URL + 'api/login/',
                 json={'username': username,
                       'password': password}
             ).json()
@@ -160,15 +169,21 @@ class MenuLogin(QWidget):
         password = self.password.text()
 
         user_existance = requests.get(
-            f'http://127.0.0.1:8000/api/users/{username}/'
+            BASE_URL + f'api/users/{username}/'
         ).json()
 
         if 'detail' in user_existance:
             requests.post(
-                'http://127.0.0.1:8000/api/create/',
+                BASE_URL + 'api/create/',
                 json={'username': username,
                       'password': password}
             ).json()
+            msgbox = QMessageBox()
+            msgbox.setText('Signed up successfully')
+            msgbox.setWindowTitle('Registration')
+            msgbox.setStandardButtons(QMessageBox.Ok)
+            msgbox.exec_()
+
         else:
             self.auth_errors.setText('Account already exists')
 
@@ -179,9 +194,7 @@ class AvailableChats(QWidget):
         super().__init__()
         self.token = token
         self.current_user = username
-        self.initUI()
 
-    def initUI(self):
         self.resize(400, 400)
         self.center()
 
@@ -197,14 +210,16 @@ class AvailableChats(QWidget):
         self.ids = []
         self.chats.appendPlainText('Pick the chat number and press continue')
 
-        for i in range(len(chats)):
-            self.ids.append(chats[i]['id'])
+        for _, chat in enumerate(chats):
+            self.ids.append(chat['id'])
+
             self.chats.appendPlainText(
-                'Chat ' + str(chats[i]['id']) + ' ' + '--' +
-                str(chats[i]['sent_from_id']) + ' ' +
+                'Chat ' + str(chat['id']) + ' ' + '--' +
+                str(chat['sent_from_id']) + ' ' +
                 'with' + ' ' +
-                str(chats[i]['sent_to_id'])
+                str(chat['sent_to_id'])
             )
+
         self.continueBtn.clicked.connect(self.pick_chat)
         self.createChatBtn.clicked.connect(self.create_chat)
 
@@ -228,7 +243,7 @@ class AvailableChats(QWidget):
     @pyqtSlot()
     def get_chats(self):
         chats = requests.get(
-            'http://127.0.0.1:8000/api/chats/',
+            BASE_URL + 'api/chats/',
             headers={'Authorization': f'Token {self.token}'}
         ).json()['results']
         return chats
@@ -259,9 +274,7 @@ class CreateChat(QWidget):
         super().__init__()
         self.token = token
         self.current_user = username
-        self.initUI()
 
-    def initUI(self):
         self.resize(400, 400)
         self.center()
 
@@ -294,16 +307,16 @@ class CreateChat(QWidget):
         users_to_check = []
 
         users = requests.get(
-            'http://127.0.0.1:8000/api/users/',
+            BASE_URL + 'api/users/',
             headers={'Authorization': f'Token {self.token}'}
             ).json()['results']
 
         self.chats.setPlainText('')
-        for i in range(len(users)):
+        for _, user in enumerate(users):
             self.chats.appendPlainText(
-                users[i]['username']
+                user['username']
             )
-            users_to_check.append(users[i]['username'])
+            users_to_check.append(user['username'])
 
         return users_to_check
 
@@ -313,7 +326,7 @@ class CreateChat(QWidget):
 
         if username in self.users:
             requests.post(
-                'http://127.0.0.1:8000/api/chats/',
+                BASE_URL + 'api/chats/',
                 json={'sent_from_id': self.current_user,
                       'sent_to_id': username},
                 headers={'Authorization': f'Token {self.token}'}
@@ -327,12 +340,10 @@ class CreateChat(QWidget):
 
 
 class Chat(QMainWindow):
+
     def __init__(self, chat_num):
         super().__init__()
         self.chat_num = chat_num
-        self.initUI()
-
-    def initUI(self):
         self.populateUI()
 
         self.resize(400, 400)
@@ -372,9 +383,7 @@ class CentralWidget(QWidget):
     def __init__(self, chat_num):
         super().__init__()
         self.chat_num = chat_num
-        self.initUI()
-
-    def initUI(self):
+        
         self.textbox = QPlainTextEdit()
         self.textbox.setReadOnly(True)
 
@@ -410,15 +419,24 @@ class CentralWidget(QWidget):
 
     @pyqtSlot()
     def get_chat_messages(self):
-        messages = requests.get(
-            f'http://127.0.0.1:8000/api/chat/{self.chat_num}/'
+        chat_history = requests.get(
+            BASE_URL + f'api/chat/{self.chat_num}/'
         ).json()
-
         self.offset = calculate_offset(self.chat_num)
+        offset = 0 
+        msg_to_handle = []
+        msg_to_display = []
+        for _, message in enumerate(chat_history):
+            #'['123', '132', '322']'
+            msg_to_handle = [int(i) for i in message['message'].strip('][').split(', ')]
+            #[123, 132, 322]
+            key = generate_key(msg_to_handle, offset)
+            msg_to_display.append(decrypt(msg_to_handle, key))
+            offset += len(msg_to_handle)
 
-        for i in range(len(messages)):
+        for i in range(len(msg_to_display)):
             self.textbox.appendPlainText(
-                messages[i]['message']
+                msg_to_display[i]
             )
 
     @pyqtSlot()
@@ -426,6 +444,7 @@ class CentralWidget(QWidget):
         send_value = self.chat.text()
         self.key = generate_key(send_value, self.offset)
         encrypted_message = encrypt(send_value, self.key)
+        print(encrypted_message, type(encrypted_message))
 
         if send_value:
             send_value = json.dumps({'message': encrypted_message})
