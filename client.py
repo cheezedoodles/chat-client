@@ -17,7 +17,7 @@ from vernamcipher import (generate_key, encrypt,
                           decrypt, calculate_offset)
 
 
-WEBSOCKET_URL = f'ws://127.0.0.1:8000/ws/chat/'
+WEBSOCKET_URL = 'ws://127.0.0.1:8000/ws/chat/'
 
 BASE_URL = 'http://127.0.0.1:8000/'
 
@@ -383,7 +383,7 @@ class CentralWidget(QWidget):
     def __init__(self, chat_num):
         super().__init__()
         self.chat_num = chat_num
-        
+
         self.textbox = QPlainTextEdit()
         self.textbox.setReadOnly(True)
 
@@ -426,6 +426,7 @@ class CentralWidget(QWidget):
         offset = 0 
         msg_to_handle = []
         msg_to_display = []
+
         for _, message in enumerate(chat_history):
             #'['123', '132', '322']'
             msg_to_handle = [int(i) for i in message['message'].strip('][').split(', ')]
