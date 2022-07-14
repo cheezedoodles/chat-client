@@ -1,4 +1,5 @@
 import requests
+import json
 
 # A module that generates chat_key files looks something like this:
 # from generatefiles import generate_files
@@ -29,10 +30,14 @@ def calculate_offset(chat_id):
     messages = requests.get(
         f'http://127.0.0.1:8000/api/chat/{chat_id}/'
     ).json()
-    offset = sum([
-        len(
-          messages[i]['message'].encode('utf8')) for i in range(len(messages))
-    ])
+
+    offset = 0
+
+    for _, message in enumerate(messages):
+        message['message'] = json.loads(message['message'])
+        message_len = len(message['message'])
+        offset += message_len
+
     return offset
 
 
@@ -45,7 +50,8 @@ def generate_key(message, offset):
         message_len = len(message)
     else:
         message_len = len(message.encode('utf8'))
-    with open('chat_key', 'rb') as key:
+
+    with open('chat_key.txt', 'rb') as key:
         return key.read()[offset:offset+message_len]
 
 
@@ -53,10 +59,13 @@ def encrypt(message, key):
     """ Vernam cipher encryption method """
     message = message.encode('utf8')
     encrypted_message = [i ^ j for i, j in zip(message, key)]
+
     return encrypted_message
 
 
 def decrypt(message, key):
     """ Vernam cipher decryption method """
-    decrypted_message = bytearray([i ^ j for i, j in zip(message, key)])
+    seq = [i ^ j for i, j in zip(message, key)]
+    decrypted_message = bytearray(seq)
+
     return decrypted_message.decode('utf8')

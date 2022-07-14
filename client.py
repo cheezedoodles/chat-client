@@ -23,6 +23,7 @@ BASE_URL = 'http://127.0.0.1:8000/'
 
 ORIGIN = 'http://127.0.0.1:8000'
 
+
 class ChatThread(QObject, threading.Thread):
 
     rcv = pyqtSignal()
@@ -44,9 +45,6 @@ class ChatThread(QObject, threading.Thread):
             self.ws = websocket
             while True:
                 self.new_msg = await self.ws.recv()
-                print(json.loads(self.new_msg)['message'], 
-                type(json.loads(self.new_msg)['message']),
-                type(json.loads(self.new_msg)['message'][0]))
                 message_queue.put(json.loads(self.new_msg)['message'])
                 self.rcv.emit()
 
@@ -413,8 +411,11 @@ class CentralWidget(QWidget):
     def recieve_message(self):
         encrypted_message = message_queue.get()
         self.key = generate_key(encrypted_message, self.offset)
+        print(self.key, 'a key that is generated to decrypt')
         decrypted_message = decrypt(encrypted_message, self.key)
+        print(decrypted_message, 'decrypted message')
         self.offset += len(encrypted_message)
+        print(self.offset, 'current offset in recieve messages')
         self.textbox.appendPlainText(decrypted_message)
 
     @pyqtSlot()
@@ -422,30 +423,30 @@ class CentralWidget(QWidget):
         chat_history = requests.get(
             BASE_URL + f'api/chat/{self.chat_num}/'
         ).json()
+
         self.offset = calculate_offset(self.chat_num)
-        offset = 0 
-        msg_to_handle = []
-        msg_to_display = []
 
+        current_offset = 0
         for _, message in enumerate(chat_history):
-            #'['123', '132', '322']'
-            msg_to_handle = [int(i) for i in message['message'].strip('][').split(', ')]
-            #[123, 132, 322]
-            key = generate_key(msg_to_handle, offset)
-            msg_to_display.append(decrypt(msg_to_handle, key))
-            offset += len(msg_to_handle)
 
-        for i in range(len(msg_to_display)):
-            self.textbox.appendPlainText(
-                msg_to_display[i]
-            )
+            message['message'] = json.loads(message['message'])
+            message_len = len(message['message'])
+
+            key = generate_key(message['message'], current_offset)
+
+            current_offset += message_len
+
+            decrypted_message = decrypt(message['message'], key)
+
+            self.textbox.appendPlainText(decrypted_message)
 
     @pyqtSlot()
     def send_message(self):
         send_value = self.chat.text()
         self.key = generate_key(send_value, self.offset)
+        print(self.key, '\n is the key generated')
         encrypted_message = encrypt(send_value, self.key)
-        print(encrypted_message, type(encrypted_message))
+        print(encrypted_message, 'is the encrypted sequence of bytes')
 
         if send_value:
             send_value = json.dumps({'message': encrypted_message})
