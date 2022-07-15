@@ -1,21 +1,11 @@
 import requests
 import json
 
-# A module that generates chat_key files looks something like this:
-# from generatefiles import generate_files
-# ////////////////////////////////////////////
-# import secrets
 
-# bytes = secrets.token_bytes(10000000)
-
-# def generate_files(id):
-#     file = f'chat_{id}_key.txt'
-#     with open(file, 'wb') as file:
-#         file.write(bytes)
-# ///////////////////////////////////////////
+BASE_URL = 'http://127.0.0.1:8000/'
 
 
-def calculate_offset(chat_id):
+def calculate_offset(chat_id, token):
     """
     calculates offset
 
@@ -28,7 +18,8 @@ def calculate_offset(chat_id):
 
     """
     messages = requests.get(
-        f'http://127.0.0.1:8000/api/chat/{chat_id}/'
+        BASE_URL + f'api/chat/{chat_id}/',
+        headers={'Authorization': f'Token {token}'}
     ).json()
 
     offset = 0

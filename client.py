@@ -117,6 +117,7 @@ class MenuLogin(QWidget):
 
         password_label = QLabel('<font size="4"> password </font>')
         self.password = QLineEdit(self)
+        self.password.setEchoMode(QLineEdit.Password)
 
         self.loginBtn = QPushButton('Login', self)
         self.registerBtn = QPushButton('Register', self)
@@ -251,7 +252,7 @@ class AvailableChats(QWidget):
         chat_num = int(self.pickChat.text())
         if chat_num in self.ids:
 
-            self.chatWindow = Chat(chat_num)
+            self.chatWindow = Chat(chat_num, self.token)
             self.chatWindow.show()
 
             self.hide()
@@ -307,7 +308,7 @@ class CreateChat(QWidget):
         users = requests.get(
             BASE_URL + 'api/users/',
             headers={'Authorization': f'Token {self.token}'}
-            ).json()['results']
+        ).json()['results']
 
         self.chats.setPlainText('')
         for _, user in enumerate(users):
@@ -339,9 +340,10 @@ class CreateChat(QWidget):
 
 class Chat(QMainWindow):
 
-    def __init__(self, chat_num):
+    def __init__(self, chat_num, token):
         super().__init__()
         self.chat_num = chat_num
+        self.token = token
         self.populateUI()
 
         self.resize(400, 400)
@@ -359,7 +361,7 @@ class Chat(QMainWindow):
         self.createMenu()
         self.statusBar()
 
-        centralWidget = CentralWidget(self.chat_num)
+        centralWidget = CentralWidget(self.chat_num, self.token)
         self.setCentralWidget(centralWidget)
 
     def createMenu(self):
@@ -378,9 +380,10 @@ class Chat(QMainWindow):
 
 class CentralWidget(QWidget):
 
-    def __init__(self, chat_num):
+    def __init__(self, chat_num, token):
         super().__init__()
         self.chat_num = chat_num
+        self.token = token
 
         self.textbox = QPlainTextEdit()
         self.textbox.setReadOnly(True)
@@ -410,21 +413,22 @@ class CentralWidget(QWidget):
     @pyqtSlot()
     def recieve_message(self):
         encrypted_message = message_queue.get()
+
         self.key = generate_key(encrypted_message, self.offset)
-        print(self.key, 'a key that is generated to decrypt')
         decrypted_message = decrypt(encrypted_message, self.key)
-        print(decrypted_message, 'decrypted message')
+
         self.offset += len(encrypted_message)
-        print(self.offset, 'current offset in recieve messages')
+
         self.textbox.appendPlainText(decrypted_message)
 
     @pyqtSlot()
     def get_chat_messages(self):
         chat_history = requests.get(
-            BASE_URL + f'api/chat/{self.chat_num}/'
+            BASE_URL + f'api/chat/{self.chat_num}/',
+            headers={'Authorization': f'Token {self.token}'}
         ).json()
 
-        self.offset = calculate_offset(self.chat_num)
+        self.offset = calculate_offset(self.chat_num, self.token)
 
         current_offset = 0
         for _, message in enumerate(chat_history):
@@ -444,9 +448,7 @@ class CentralWidget(QWidget):
     def send_message(self):
         send_value = self.chat.text()
         self.key = generate_key(send_value, self.offset)
-        print(self.key, '\n is the key generated')
         encrypted_message = encrypt(send_value, self.key)
-        print(encrypted_message, 'is the encrypted sequence of bytes')
 
         if send_value:
             send_value = json.dumps({'message': encrypted_message})
