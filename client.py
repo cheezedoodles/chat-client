@@ -21,7 +21,7 @@ WEBSOCKET_URL = 'ws://127.0.0.1:8000/ws/chat/'
 
 BASE_URL = 'http://127.0.0.1:8000/'
 
-ORIGIN = 'http://127.0.0.1:8000'
+ORIGIN = 'http://127.0.0.1:8000'  # TODO: Эти три константы можно смержить в одну
 
 
 class ChatThread(QObject, threading.Thread):
@@ -71,7 +71,7 @@ class Menu(QMainWindow):
         super().__init__()
         self.initUI()
 
-    def initUI(self):
+    def initUI(self):  # TODO: А тут решил оставить её
         self.populateUI()
 
         self.resize(400, 400)
@@ -108,7 +108,7 @@ class Menu(QMainWindow):
 
 class MenuLogin(QWidget):
 
-    token = None
+    token = None  # TODO: Это ж переменная экземпляра класса, а не самого класса
 
     def __init__(self):
         super().__init__()
@@ -119,8 +119,8 @@ class MenuLogin(QWidget):
         self.password = QLineEdit(self)
         self.password.setEchoMode(QLineEdit.Password)
 
-        self.loginBtn = QPushButton('Login', self)
-        self.registerBtn = QPushButton('Register', self)
+        self.loginBtn = QPushButton('Login', self)  # TODO: лучше полностью назвать Button
+        self.registerBtn = QPushButton('Register', self)  # TODO: Аналогично
 
         self.auth_errors = QLabel('')
 
@@ -129,6 +129,7 @@ class MenuLogin(QWidget):
 
         self.show()
 
+        # TODO: А вот создание GRID можно и вынести в функцию
         grid = QGridLayout()
 
         grid.addWidget(username_label, 0, 0)
@@ -153,11 +154,11 @@ class MenuLogin(QWidget):
                       'password': password}
             ).json()
             token = login_request['token']
-        except KeyError:
+        except KeyError:  # TODO: Не обратывай блоком try нормальное поведение системы
             self.auth_errors.setText('Invalid credentials')
             return
 
-        self.availableChatsWindow = AvailableChats(token, username)
+        self.availableChatsWindow = AvailableChats(token, username)  # TODO: В __init__ или класс как None
         self.availableChatsWindow.show()
 
     @pyqtSlot()
@@ -177,7 +178,7 @@ class MenuLogin(QWidget):
                 json={'username': username,
                       'password': password}
             ).json()
-            msgbox = QMessageBox()
+            msgbox = QMessageBox()  # TODO: Можно вынести в функцию
             msgbox.setText('Signed up successfully')
             msgbox.setWindowTitle('Registration')
             msgbox.setStandardButtons(QMessageBox.Ok)
@@ -195,7 +196,7 @@ class AvailableChats(QWidget):
         self.current_user = username
 
         self.resize(400, 400)
-        self.center()
+        self.center()  # TODO: Довольно часто встречается в коде, может стоит вынести в Mix-in?
 
         self.chats = QPlainTextEdit()
         self.chats.setReadOnly(True)
@@ -212,7 +213,7 @@ class AvailableChats(QWidget):
         for _, chat in enumerate(chats):
             self.ids.append(chat['id'])
 
-            self.chats.appendPlainText(
+            self.chats.appendPlainText(  # TODO: лучше используй f-строки
                 'Chat ' + str(chat['id']) + ' ' + '--' +
                 str(chat['sent_from_id']) + ' ' +
                 'with' + ' ' +
@@ -224,6 +225,7 @@ class AvailableChats(QWidget):
 
         self.show()
 
+        # TODO: вынеси gridы таки в функции
         grid = QGridLayout()
         grid.setSpacing(3)
         grid.addWidget(self.chats, 0, 0, 1, 3)
@@ -252,7 +254,8 @@ class AvailableChats(QWidget):
         chat_num = int(self.pickChat.text())
         if chat_num in self.ids:
 
-            self.chatWindow = Chat(chat_num, self.token)
+            self.chatWindow = Chat(chat_num, self.token)  # TODO: Для всего, что ты создаёшь в
+            # TODO: других функциях объявляй переменную в __init__
             self.chatWindow.show()
 
             self.hide()
@@ -370,7 +373,7 @@ class Chat(QMainWindow):
         fileMenu = menuBar.addMenu('&File')
         fileMenu.addAction(self.createExitAction())
 
-    def createExitAction(self):
+    def createExitAction(self):   # TODO: для дублирующихся функций сделай Mix-in
         exitAction = QAction(QIcon('exit.png'), '&Exit', self)
         exitAction.setShortcut('Ctrl+Q')
         exitAction.setStatusTip('Exit application')
@@ -411,13 +414,15 @@ class CentralWidget(QWidget):
         self.setLayout(grid)
 
     @pyqtSlot()
-    def recieve_message(self):
+    def recieve_message(self):  # TODO: пофикси орфографическую ошибку в название,
+        # TODO: и придерживайся одного стиля нейминга
+
         encrypted_message = message_queue.get()
 
-        self.key = generate_key(encrypted_message, self.offset)
+        self.key = generate_key(encrypted_message, self.offset)  # TODO: Опять же не объявляй вне __init__
         decrypted_message = decrypt(encrypted_message, self.key)
 
-        self.offset += len(encrypted_message)
+        self.offset += len(encrypted_message)  # TODO: Опять же не объявляй вне __init__
 
         self.textbox.appendPlainText(decrypted_message)
 
@@ -457,7 +462,12 @@ class CentralWidget(QWidget):
 
 
 if __name__ == '__main__':
-    message_queue = queue.Queue()
+    message_queue = queue.Queue()  # TODO: Лучше передавать по ссылке в классы
     app = QApplication(sys.argv)
     chat = Menu()
     sys.exit(app.exec_())
+
+# TODO: Общее:
+#  1) пройдись black или аналогичным и посмотри, где не так по отступам
+#  2) Лучше QTшные классы вынеси по логике
+#  3) Создай README (не пустой)
