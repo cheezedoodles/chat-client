@@ -31,6 +31,28 @@ BASE_URL = "http://127.0.0.1:8000/"
 
 ORIGIN = "http://127.0.0.1:8000"
 
+class CenteringMixin:
+
+    def center(self):
+        qr = self.frameGeometry()
+        cp = QDesktopWidget().availableGeometry().center()
+        qr.moveCenter(cp)
+        self.move(qr.topLeft())
+
+class MenuAndExitMixin:
+
+    def createMenu(self):
+        menuBar = self.menuBar()
+
+        fileMenu = menuBar.addMenu("&File")
+        fileMenu.addAction(self.createExitAction())
+
+    def createExitAction(self):
+        exitAction = QAction(QIcon("exit.png"), "&Exit", self)
+        exitAction.setShortcut("Ctrl+Q")
+        exitAction.setStatusTip("Exit application")
+        exitAction.triggered.connect(self.close)
+        return exitAction
 
 class ChatThread(QObject, threading.Thread):
 
@@ -73,7 +95,7 @@ class ChatThread(QObject, threading.Thread):
         self.receiver_wrapper()
 
 
-class Menu(QMainWindow):
+class Menu(CenteringMixin, MenuAndExitMixin, QMainWindow):
     def __init__(self):
         super().__init__()
         self.populateUI()
@@ -82,31 +104,12 @@ class Menu(QMainWindow):
         self.setWindowTitle("Menu")
         self.show()
 
-    def center(self):
-        qr = self.frameGeometry()
-        cp = QDesktopWidget().availableGeometry().center()
-        qr.moveCenter(cp)
-        self.move(qr.topLeft())
-
     def populateUI(self):
         self.createMenu()
         self.statusBar()
 
         loginWidget = MenuLogin()
         self.setCentralWidget(loginWidget)
-
-    def createMenu(self):
-        menuBar = self.menuBar()
-
-        fileMenu = menuBar.addMenu("&File")
-        fileMenu.addAction(self.createExitAction())
-
-    def createExitAction(self):
-        exitAction = QAction(QIcon("exit.png"), "&Exit", self)
-        exitAction.setShortcut("Ctrl+Q")
-        exitAction.setStatusTip("Exit application")
-        exitAction.triggered.connect(self.close)
-        return exitAction
 
 
 class MenuLogin(QWidget):
@@ -189,7 +192,7 @@ class MenuLogin(QWidget):
             self.auth_errors.setText("Account already exists")
 
 
-class AvailableChats(QWidget):
+class AvailableChats(CenteringMixin, QWidget):
     def __init__(self, token, username):
         super().__init__()
         self.token = token
@@ -198,7 +201,7 @@ class AvailableChats(QWidget):
         self.createChat = None
 
         self.resize(400, 400)
-        self.center()  # TODO: Довольно часто встречается в коде, может стоит вынести в Mix-in?
+        self.center()
 
         self.chats = QPlainTextEdit()
         self.chats.setReadOnly(True)
@@ -239,12 +242,6 @@ class AvailableChats(QWidget):
 
         self.setLayout(grid)
 
-    def center(self):
-        qr = self.frameGeometry()
-        cp = QDesktopWidget().availableGeometry().center()
-        qr.moveCenter(cp)
-        self.move(qr.topLeft())
-
     @pyqtSlot()
     def get_chats(self):
         chats = requests.get(
@@ -272,7 +269,7 @@ class AvailableChats(QWidget):
         self.hide()
 
 
-class CreateChat(QWidget):
+class CreateChat(CenteringMixin, QWidget):
     def __init__(self, token, username):
         super().__init__()
         self.token = token
@@ -303,12 +300,6 @@ class CreateChat(QWidget):
         grid.addWidget(self.createchat_button, 1, 2)
 
         self.setLayout(grid)
-
-    def center(self):
-        qr = self.frameGeometry()
-        cp = QDesktopWidget().availableGeometry().center()
-        qr.moveCenter(cp)
-        self.move(qr.topLeft())
 
     def show_users(self):
         users_to_check = []
@@ -342,7 +333,7 @@ class CreateChat(QWidget):
             self.pickUser.setText("This user doesn't exist")
 
 
-class Chat(QMainWindow):
+class Chat(CenteringMixin, MenuAndExitMixin, QMainWindow):
     def __init__(self, chat_num, token):
         super().__init__()
         self.chat_num = chat_num
@@ -354,31 +345,12 @@ class Chat(QMainWindow):
         self.setWindowTitle("Chat")
         self.show()
 
-    def center(self):
-        qr = self.frameGeometry()
-        cp = QDesktopWidget().availableGeometry().center()
-        qr.moveCenter(cp)
-        self.move(qr.topLeft())
-
     def populateUI(self):
         self.createMenu()
         self.statusBar()
 
         centralWidget = CentralWidget(self.chat_num, self.token)
         self.setCentralWidget(centralWidget)
-
-    def createMenu(self):
-        menuBar = self.menuBar()
-
-        fileMenu = menuBar.addMenu("&File")
-        fileMenu.addAction(self.createExitAction())
-
-    def createExitAction(self):  # TODO: для дублирующихся функций сделай Mix-in
-        exitAction = QAction(QIcon("exit.png"), "&Exit", self)
-        exitAction.setShortcut("Ctrl+Q")
-        exitAction.setStatusTip("Exit application")
-        exitAction.triggered.connect(self.close)
-        return exitAction
 
 
 class CentralWidget(QWidget):
@@ -406,6 +378,9 @@ class CentralWidget(QWidget):
         self.send_button.clicked.connect(self.send_message)
         self.messages.rcv.connect(self.receive_message)
 
+        self.create_grid()
+
+    def create_grid(self):
         grid = QGridLayout()
         grid.setSpacing(3)
         grid.addWidget(self.textbox, 0, 0, 1, 3)
