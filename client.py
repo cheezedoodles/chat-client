@@ -400,7 +400,7 @@ class CentralWidget(QWidget):
         self.get_chat_messages()
 
         self.sendBtn.clicked.connect(self.send_message)
-        self.messages.rcv.connect(self.recieve_message)
+        self.messages.rcv.connect(self.receive_message)
 
         grid = QGridLayout()
         grid.setSpacing(3)
@@ -411,7 +411,7 @@ class CentralWidget(QWidget):
         self.setLayout(grid)
 
     @pyqtSlot()
-    def recieve_message(self):
+    def receive_message(self):
         encrypted_message = message_queue.get()
 
         self.key = generate_key(encrypted_message, self.offset)
