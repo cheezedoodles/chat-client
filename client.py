@@ -21,7 +21,7 @@ WEBSOCKET_URL = 'ws://127.0.0.1:8000/ws/chat/'
 
 BASE_URL = 'http://127.0.0.1:8000/'
 
-ORIGIN = 'http://127.0.0.1:8000'  # TODO: Эти три константы можно смержить в одну
+ORIGIN = 'http://127.0.0.1:8000'
 
 
 class ChatThread(QObject, threading.Thread):
@@ -67,13 +67,10 @@ class ChatThread(QObject, threading.Thread):
 
 
 class Menu(QMainWindow):
+
     def __init__(self):
         super().__init__()
-        self.initUI()
-
-    def initUI(self):  # TODO: А тут решил оставить её
         self.populateUI()
-
         self.resize(400, 400)
         self.center()
         self.setWindowTitle('Menu')
@@ -108,37 +105,38 @@ class Menu(QMainWindow):
 
 class MenuLogin(QWidget):
 
-    token = None  # TODO: Это ж переменная экземпляра класса, а не самого класса
-
     def __init__(self):
         super().__init__()
-        username_label = QLabel('<font size="4"> username </font>')
+        self.username_label = QLabel('<font size="4"> username </font>')
         self.username = QLineEdit(self)
 
-        password_label = QLabel('<font size="4"> password </font>')
+        self.token = None
+
+        self.password_label = QLabel('<font size="4"> password </font>')
         self.password = QLineEdit(self)
         self.password.setEchoMode(QLineEdit.Password)
 
-        self.loginBtn = QPushButton('Login', self)  # TODO: лучше полностью назвать Button
-        self.registerBtn = QPushButton('Register', self)  # TODO: Аналогично
-
+        self.login_button = QPushButton('Login', self)
+        self.register_button = QPushButton('Register', self)
         self.auth_errors = QLabel('')
 
-        self.loginBtn.clicked.connect(self.login_user)
-        self.registerBtn.clicked.connect(self.register_user)
+        self.login_button.clicked.connect(self.login_user)
+        self.register_button.clicked.connect(self.register_user)
 
         self.show()
 
-        # TODO: А вот создание GRID можно и вынести в функцию
+        self.create_grid()
+
+    def create_grid(self):
         grid = QGridLayout()
 
-        grid.addWidget(username_label, 0, 0)
+        grid.addWidget(self.username_label, 0, 0)
         grid.addWidget(self.username, 0, 1)
-        grid.addWidget(password_label, 1, 0)
+        grid.addWidget(self.password_label, 1, 0)
         grid.addWidget(self.password, 1, 1)
         grid.addWidget(self.auth_errors, 2, 1)
-        grid.addWidget(self.loginBtn, 2, 0, 8, 2)
-        grid.addWidget(self.registerBtn, 3, 0, 8, 2)
+        grid.addWidget(self.login_button, 2, 0, 8, 2)
+        grid.addWidget(self.register_button, 3, 0, 8, 2)
 
         self.setLayout(grid)
 
@@ -153,12 +151,12 @@ class MenuLogin(QWidget):
                 json={'username': username,
                       'password': password}
             ).json()
-            token = login_request['token']
+            self.token = login_request['token']
         except KeyError:  # TODO: Не обратывай блоком try нормальное поведение системы
             self.auth_errors.setText('Invalid credentials')
             return
 
-        self.availableChatsWindow = AvailableChats(token, username)  # TODO: В __init__ или класс как None
+        self.availableChatsWindow = AvailableChats(self.token, username)  # TODO: В __init__ или класс как None
         self.availableChatsWindow.show()
 
     @pyqtSlot()
@@ -387,6 +385,8 @@ class CentralWidget(QWidget):
         super().__init__()
         self.chat_num = chat_num
         self.token = token
+        self.key = None
+        self.offset = None
 
         self.textbox = QPlainTextEdit()
         self.textbox.setReadOnly(True)
@@ -417,10 +417,10 @@ class CentralWidget(QWidget):
     def receive_message(self):
         encrypted_message = message_queue.get()
 
-        self.key = generate_key(encrypted_message, self.offset)  # TODO: Опять же не объявляй вне __init__
+        self.key = generate_key(encrypted_message, self.offset)
         decrypted_message = decrypt(encrypted_message, self.key)
 
-        self.offset += len(encrypted_message)  # TODO: Опять же не объявляй вне __init__
+        self.offset += len(encrypted_message)
 
         self.textbox.appendPlainText(decrypted_message)
 
