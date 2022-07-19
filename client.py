@@ -153,11 +153,11 @@ class MenuLogin(QWidget):
         self.auth_errors.setText("")
         username = self.username.text()
         password = self.password.text()
-        try:
-            login_request = requests.post(
+        login_request = requests.post(
                 BASE_URL + "api/login/",
                 json={"username": username, "password": password},
             ).json()
+        try:
             self.token = login_request["token"]
         except KeyError:  # TODO: Не обратывай блоком try нормальное поведение системы
             self.auth_errors.setText("Invalid credentials")
@@ -442,6 +442,4 @@ if __name__ == "__main__":
     sys.exit(app.exec_())
 
 # TODO: Общее:
-#  1) пройдись black или аналогичным и посмотри, где не так по отступам
-#  2) Лучше QTшные классы вынеси по логике
-#  3) Создай README (не пустой)
+#  1) Лучше QTшные классы вынеси по логике
