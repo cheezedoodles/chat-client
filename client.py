@@ -58,10 +58,12 @@ class ChatThread(QObject, threading.Thread):
 
     rcv = pyqtSignal()
 
-    def __init__(self, chat_id):
+    def __init__(self, chat_id, token, username):
         self.chat_id = chat_id
         self.ws = None
         self.new_msg = None
+        self.token = token
+        self.username = username
         super().__init__()
 
     async def send(self, message):
@@ -69,12 +71,13 @@ class ChatThread(QObject, threading.Thread):
 
     async def receiver(self):
         async with websockets.connect(
-            WEBSOCKET_URL + f"{self.chat_id}/", origin=ORIGIN
+            WEBSOCKET_URL + f"{self.chat_id}/{self.username}/", origin=ORIGIN,
+            extra_headers={"Authorization": f"Token {self.token}"}
         ) as websocket:
             self.ws = websocket
             while True:
                 self.new_msg = await self.ws.recv()
-                message_queue.put(json.loads(self.new_msg)["message"])
+                message_queue.put(json.loads(self.new_msg))
                 self.rcv.emit()
 
     def send_wrapper(self, msg):
@@ -254,7 +257,7 @@ class AvailableChats(CenteringMixin, QWidget):
         chat_num = int(self.pickChat.text())
         if chat_num in self.ids:
 
-            self.chatWindow = Chat(chat_num, self.token)
+            self.chatWindow = Chat(chat_num, self.token, self.current_user)
             self.chatWindow.show()
 
             self.hide()
@@ -334,10 +337,11 @@ class CreateChat(CenteringMixin, QWidget):
 
 
 class Chat(CenteringMixin, MenuAndExitMixin, QMainWindow):
-    def __init__(self, chat_num, token):
+    def __init__(self, chat_num, token, username):
         super().__init__()
         self.chat_num = chat_num
         self.token = token
+        self.current_user = username
         self.populateUI()
 
         self.resize(400, 400)
@@ -349,15 +353,16 @@ class Chat(CenteringMixin, MenuAndExitMixin, QMainWindow):
         self.createMenu()
         self.statusBar()
 
-        centralWidget = CentralWidget(self.chat_num, self.token)
+        centralWidget = CentralWidget(self.chat_num, self.token, self.current_user)
         self.setCentralWidget(centralWidget)
 
 
 class CentralWidget(QWidget):
-    def __init__(self, chat_num, token):
+    def __init__(self, chat_num, token, username):
         super().__init__()
         self.chat_num = chat_num
         self.token = token
+        self.current_user = username
         self.key = None
         self.offset = None
 
@@ -367,7 +372,7 @@ class CentralWidget(QWidget):
         self.chat = QLineEdit(self)
         self.send_button = QPushButton("Send", self)
 
-        self.messages = ChatThread(self.chat_num)
+        self.messages = ChatThread(self.chat_num, self.token, self.current_user)
         self.messages.daemon = True
         self.messages.start()
 
@@ -391,14 +396,17 @@ class CentralWidget(QWidget):
 
     @pyqtSlot()
     def receive_message(self):
-        encrypted_message = message_queue.get()
+        item = message_queue.get()
+        username = item['username']
+        encrypted_message = item['message']
+
 
         self.key = generate_key(encrypted_message, self.offset)
         decrypted_message = decrypt(encrypted_message, self.key)
 
         self.offset += len(encrypted_message)
 
-        self.textbox.appendPlainText(decrypted_message)
+        self.textbox.appendPlainText(f'{username}: {decrypted_message}')
 
     @pyqtSlot()
     def get_chat_messages(self):
@@ -412,6 +420,8 @@ class CentralWidget(QWidget):
         current_offset = 0
         for _, message in enumerate(chat_history):
 
+            user = message['user']
+
             message["message"] = json.loads(message["message"])
             message_len = len(message["message"])
 
@@ -421,7 +431,7 @@ class CentralWidget(QWidget):
 
             decrypted_message = decrypt(message["message"], key)
 
-            self.textbox.appendPlainText(decrypted_message)
+            self.textbox.appendPlainText(f'{user}: {decrypted_message}')
 
     @pyqtSlot()
     def send_message(self):
