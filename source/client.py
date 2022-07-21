@@ -119,6 +119,27 @@ class Menu(CenteringMixin, MenuAndExitMixin, QMainWindow):
         self.setCentralWidget(loginWidget)
 
 
+class Chat(CenteringMixin, MenuAndExitMixin, QMainWindow):
+    def __init__(self, chat_num, token, username):
+        super().__init__()
+        self.chat_num = chat_num
+        self.token = token
+        self.current_user = username
+        self.populateUI()
+
+        self.resize(400, 400)
+        self.center()
+        self.setWindowTitle("Chat")
+        self.show()
+
+    def populateUI(self):
+        self.createMenu()
+        self.statusBar()
+
+        centralWidget = ChatWidget(self.chat_num, self.token, self.current_user)
+        self.setCentralWidget(centralWidget)
+
+
 class MenuLoginWidget(QWidget):
     def __init__(self):
         super().__init__()
@@ -344,27 +365,6 @@ class CreateChat(CenteringMixin, QWidget):
             self.pickUser.setText("This user doesn't exist")
 
 
-class Chat(CenteringMixin, MenuAndExitMixin, QMainWindow):
-    def __init__(self, chat_num, token, username):
-        super().__init__()
-        self.chat_num = chat_num
-        self.token = token
-        self.current_user = username
-        self.populateUI()
-
-        self.resize(400, 400)
-        self.center()
-        self.setWindowTitle("Chat")
-        self.show()
-
-    def populateUI(self):
-        self.createMenu()
-        self.statusBar()
-
-        centralWidget = ChatWidget(self.chat_num, self.token, self.current_user)
-        self.setCentralWidget(centralWidget)
-
-
 class ChatWidget(QWidget):
     def __init__(self, chat_num, token, username):
         super().__init__()
@@ -457,6 +457,3 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     chat = Menu()
     sys.exit(app.exec_())
-
-# TODO: Общее:
-#  1) Лучше QTшные классы вынеси по логике
