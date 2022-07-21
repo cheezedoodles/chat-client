@@ -274,7 +274,7 @@ class AvailableChatsWidget(CenteringMixin, QWidget):
     def get_chats(self):
         chats = requests.get(
             BASE_URL + "api/chats/", headers={"Authorization": f"Token {self.token}"}
-        ).json()["results"]
+        ).json()
         return chats
 
     @pyqtSlot()
@@ -334,7 +334,7 @@ class CreateChat(CenteringMixin, QWidget):
 
         users = requests.get(
             BASE_URL + "api/users/", headers={"Authorization": f"Token {self.token}"}
-        ).json()["results"]
+        ).json()
 
         self.chats.setPlainText("")
         for _, user in enumerate(users):
