@@ -24,10 +24,6 @@ and a django server cloned from the vernamcipher-chatapp repository:
 ```bash
 python manage.py runserver
 ```
-Before you run client.py for the first time you'll need to generate a key file by running the following command:
-```bash
-python key_generator.py
-```
 And then run:
 ```bash
 python client.py
