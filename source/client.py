@@ -115,11 +115,11 @@ class Menu(CenteringMixin, MenuAndExitMixin, QMainWindow):
         self.createMenu()
         self.statusBar()
 
-        loginWidget = MenuLogin()
+        loginWidget = MenuLoginWidget()
         self.setCentralWidget(loginWidget)
 
 
-class MenuLogin(QWidget):
+class MenuLoginWidget(QWidget):
     def __init__(self):
         super().__init__()
         self.username_label = QLabel('<font size="4"> username </font>')
@@ -166,11 +166,11 @@ class MenuLogin(QWidget):
         ).json()
         try:
             self.token = login_request["token"]
-        except KeyError:  # TODO: Не обратывай блоком try нормальное поведение системы
+        except KeyError:
             self.auth_errors.setText("Invalid credentials")
             return
 
-        self.availableChatsWindow = AvailableChats(self.token, username)
+        self.availableChatsWindow = AvailableChatsWidget(self.token, username)
         self.availableChatsWindow.show()
 
     def signup_msgbox(self):
@@ -199,7 +199,7 @@ class MenuLogin(QWidget):
             self.auth_errors.setText("Account already exists")
 
 
-class AvailableChats(CenteringMixin, QWidget):
+class AvailableChatsWidget(CenteringMixin, QWidget):
     def __init__(self, token, username):
         super().__init__()
         self.token = token
@@ -336,7 +336,7 @@ class CreateChat(CenteringMixin, QWidget):
             chat_id = new_chat["id"]
             generate_files(chat_id)
 
-            self.availableChats = AvailableChats(self.token, self.current_user)
+            self.availableChats = AvailableChatsWidget(self.token, self.current_user)
 
             self.hide()
             return
@@ -361,11 +361,11 @@ class Chat(CenteringMixin, MenuAndExitMixin, QMainWindow):
         self.createMenu()
         self.statusBar()
 
-        centralWidget = CentralWidget(self.chat_num, self.token, self.current_user)
+        centralWidget = ChatWidget(self.chat_num, self.token, self.current_user)
         self.setCentralWidget(centralWidget)
 
 
-class CentralWidget(QWidget):
+class ChatWidget(QWidget):
     def __init__(self, chat_num, token, username):
         super().__init__()
         self.chat_num = chat_num
